@@ -33,8 +33,8 @@ git clone https://github.com/carjavi/claude_carjavi
 ```PowerShell
 # Desde PowerShell
 cd claude_carjavi
-# Cambia la política de seguridad de PowerShell. Permite ejecutar scripts locales sin firma y descargados de internet
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process; .\install.ps1
+# Cambia la política de seguridad de PowerShell. Bypass no exige firma ni pregunta nada, y como es -Scope Process solo aplica a esta ventana de PowerShell, no cambia la configuración de tu sistema
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process; .\install.ps1
 ```
 
 ### Linux
