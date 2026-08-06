@@ -11,6 +11,8 @@
 
 <br>
 
+Mi configuración personal de Claude Code (P.D. no hay data sensibles)
+
 ## Estructura 
 ```bash
 claude_github/
@@ -295,5 +297,5 @@ Comentarios por lenguaje: `#` (Python/Shell/YAML) · `//` o `/** */` (JS/TS/C/C+
 
 
 
-# 
-Mi configuración personal de Claude Code (P.D. no hay data sensibles)
+
+
