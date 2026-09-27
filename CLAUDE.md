@@ -2,7 +2,7 @@
 
 Este archivo da guía **global** a Claude Code (claude.ai/code) en todos mis repositorios. Para que aplique en todos lados debe copiarse a `~/.claude/CLAUDE.md`; cualquier `CLAUDE.md` dentro de un proyecto específico complementa o sobreescribe lo que diga aquí.
 
-Las convenciones específicas por lenguaje/plataforma viven como skills en `skills/` (se instalan en `~/.claude/skills/` y se activan solas según la tarea): `python-defaults`, `javascript-node-defaults`, `embedded-firmware-cpp`, `research-references`, `source-metadata-header`. Instalar con `install.ps1` (Windows) o `install.sh` (macOS/Linux) — sobrescriben lo que ya exista con el mismo nombre.
+Las convenciones específicas por lenguaje/plataforma viven como skills en `skills/` (se instalan en `~/.claude/skills/` y se activan solas según la tarea): `python-defaults`, `javascript-node-defaults`, `embedded-firmware-cpp`, `stm32-cubemx-project`, `research-references`, `source-metadata-header`. Instalar con `install.ps1` (Windows) o `install.sh` (macOS/Linux) — sobrescriben lo que ya exista con el mismo nombre.
 
 ---
 
