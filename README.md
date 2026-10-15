@@ -15,20 +15,32 @@ Mi configuración personal de Claude Code (P.D. no hay data sensibles)
 
 ## Estructura 
 ```bash
-claude_github/
-├── CLAUDE.md                    (5.865 caracteres)
-├── skills/
+claude_carjavi/
+├── CLAUDE.md                    (reglas globales -> ~/.claude/CLAUDE.md)
+├── skills/                      (skills propias -> ~/.claude/skills/)
 │   ├── python-defaults/SKILL.md
 │   ├── javascript-node-defaults/SKILL.md
 │   ├── embedded-firmware-cpp/SKILL.md
 │   ├── stm32-cubemx-project/SKILL.md
 │   ├── research-references/SKILL.md
 │   └── source-metadata-header/SKILL.md
+├── externals.json               (skills, repos, MCP y herramientas externas a instalar)
+├── externals/                   (scripts de los externos que necesitan más de un comando)
+│   ├── ghidra/install.ps1 · install.sh
+│   └── rea/install.ps1 · install.sh
 ├── install.ps1                  (Windows)
-└── install.sh                   (macOS/Linux )
+└── install.sh                   (macOS/Linux)
 ```
 
 ## Install
+Un solo instalador deja el PC listo: copia `CLAUDE.md` y las skills propias a `~/.claude/`, y después instala todo lo declarado en [`externals.json`](#skills-externas) (hoy: Ghidra + REA). Volver a correrlo actualiza todo.
+
+**Requisitos previos**
+- Git.
+- Node.js **22.19+**, **24.11+** o **26+** con npm. En Windows: `winget install OpenJS.NodeJS.LTS`.
+- ~1,5 GB libres (Ghidra + JDK).
+- **Claude Desktop cerrado por completo** (icono de la bandeja → *Quit*). Si está abierto puede borrar el registro de los MCP; el instalador lo detecta y omite Claude Desktop en ese caso.
+
 ```bash
 git clone https://github.com/carjavi/claude_carjavi
 ```
@@ -40,11 +52,299 @@ cd claude_carjavi
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process; .\install.ps1
 ```
 
-### Linux
+### Linux / macOS
 ```bash
-claude_carjavi
+cd claude_carjavi
 chmod +x install.sh && ./install.sh
 ```
+
+### Actualizar (en cualquier PC)
+```bash
+cd claude_carjavi
+git pull
+# y vuelve a correr el instalador de tu sistema (arriba)
+```
+
+Al terminar: **abre una terminal nueva** (para que tome `GHIDRA_INSTALL_DIR` y `JAVA_HOME`) y **reinicia Claude Code / Claude Desktop**. El instalador termina con un resumen de lo instalado, lo omitido y lo que falló; un item que falla no detiene a los demás.
+
+<br>
+
+# Mis Skills
+
+Skills escritas por mí. Cada una es una carpeta en [`skills/`](./skills) y el instalador la copia completa a `~/.claude/skills/`. Su contenido está más abajo, en [Archivos *.md](#archivos-md).
+
+| Skill | Qué hace |
+|---|---|
+| [`python-defaults`](#skill-python-defaults) | Defaults para Python: type hints, async, logging JSON, FastAPI + Pydantic, MQTT/Modbus/RS485. |
+| [`javascript-node-defaults`](#skill-javascript-node) | Defaults para JS/Node y frontend: LTS, async/await, React + WebSerial + WebSocket. |
+| [`embedded-firmware-cpp`](#skill-embedded-firmware) | Estándares de firmware C/C++ (ESP32, STM32, RPi, Arduino): C++17, FreeRTOS, memoria, logging. |
+| [`stm32-cubemx-project`](#skill-stm32-cubemx-project) | Flujo STM32CubeMX: `.ioc` + CLI, USER CODE, USB CDC, anti-rebote, README del proyecto. |
+| [`research-references`](#skill-research-references) | Investigar antes de generar código y cerrar con sección de Referencias. |
+| [`source-metadata-header`](#skill-source-metadata-header) | Bloque de metadata (@author, @version...) en cada archivo fuente. |
+
+**Agregar una skill propia**: crea `skills/<nombre>/SKILL.md` (más `references/` o `scripts/` si los necesita) y agrégala a la tabla.
+
+<br>
+
+<br>
+
+<br>
+
+# Skills Externas
+
+Skills de otros repositorios, junto con los MCP y herramientas que necesitan. Se instalan desde [`externals.json`](./externals.json) en el orden en que aparecen ahí. Cada skill tiene su propia sección.
+
+| Skill | Qué es | Items en `externals.json` |
+|---|---|---|
+| [reverse-engineer-anything (REA)](#reverse-engineer-anything-rea) | Ingeniería inversa de programas, apps, webs y firmware con Claude. | `ghidra`, `jadx`, `rea` |
+
+Para sumar una nueva, sigue [Agregar una skill externa](#agregar-una-skill-externa).
+
+<br>
+
+## reverse-engineer-anything (REA)
+
+[REA — Reverse Engineer Anything](https://github.com/morluto/rea) (licencia MIT) conecta a Claude con herramientas de ingeniería inversa para investigar software **sin tener su código fuente**: ejecutables nativos, apps JavaScript/Electron, ensamblados .NET, sitios web, APKs y firmware. Todo el análisis corre en el PC; a Claude solo le llegan los resultados.
+
+### Qué hace
+
+Son tres piezas que se instalan juntas:
+
+| Pieza | Para qué |
+|---|---|
+| **CLI `rea`** | Analizar desde la terminal (`rea inspect`, `rea decompile`, ...). |
+| **Servidor MCP `rea`** | Le da a Claude las herramientas de análisis: inspeccionar, decompilar, rastrear llamadas e IPC, comparar versiones. |
+| **Skill `reverse-engineer-anything`** | Le enseña a Claude **cuándo** usar REA y **cómo** investigar. |
+
+La skill guía a Claude para:
+- **Elegir la herramienta según el objetivo**: un `.asar` o app Electron → análisis de JavaScript; un `.exe` .NET → metadata gestionada; un binario nativo → Ghidra; una web → captura del navegador; un APK → análisis Android.
+- **Responder con evidencia**: cada conclusión cita el archivo, la función o la dirección de donde sale, y separa lo comprobado de lo inferido y lo desconocido.
+- **No usar REA cuando no hace falta**: si tienes el código fuente completo, Claude lo lee directamente.
+- **Diagnosticar** si faltan herramientas o registros (`rea doctor`) antes de reintentar a ciegas.
+
+### Qué puede analizar
+
+No es solo para archivos locales. REA trabaja con archivos en tu PC, con **sitios web en vivo** (abre la página en un navegador Chrome/Edge y observa lo que pasa) y con capturas de red o dispositivos Android conectados.
+
+| Objetivo | Qué obtiene Claude | Windows | Necesita |
+|---|---|---|---|
+| **App Electron / JavaScript** (VS Code, Arduino IDE 2, Discord, Postman, `.asar`) | Módulos, imports, source maps, rutas, canales IPC, add-ons nativos. | ✅ | Node.js (ya instalado) |
+| **Programa .NET** (`.exe`/`.dll` en C#, WinForms, WPF) | Clases, métodos, firmas, strings. Sin ejecutarlo. | ✅ | Nada extra |
+| **Ejecutable nativo** (C/C++, Go, Rust: `.exe`, ELF) | Funciones, pseudocódigo decompilado, ensamblador, strings, imports. | ⚠️ Solo `.exe` x86-64 | Ghidra (ya instalado) |
+| **Sitio o aplicación web** (URL pública o `localhost`) | Estructura de la página, scripts cargados, peticiones de red/APIs, capturas de pantalla. | ✅ | Chrome o Edge |
+| **Captura de red guardada** (`.har` del navegador, Fiddler) | Endpoints, parámetros, cabeceras, flujo de llamadas. | ✅ | Nada extra |
+| **APK Android** (incluye Flutter) | Código Java/Kotlin decompilado, manifiesto, permisos, recursos. | ✅ | JADX + JDK 17+ (ya instalados) |
+| **Dispositivo Android conectado** | Logs, dumps, capturas. | ✅ | `adb` |
+| **Firmware** (`.bin`, `.elf` de STM32/ESP32, imágenes de router) | Particiones, sistemas de archivos, decompilado ARM. | ❌ Usa Linux/WSL | Ghidra, Binwalk/Unblob |
+| **Comportamiento en ejecución** (lanzar un proceso y observarlo) | Salida, archivos y procesos que abre. | ❌ Solo Linux/macOS | — |
+| **Otros**: bases SQLite, WASM, bytecode EVM, grabaciones de analizador lógico | Estructura y contenido. | ✅ | — |
+
+### Dónde es bueno y dónde no
+
+**Brilla en:**
+- **Entender cómo hace algo una app que no es tuya** para replicarlo en tu proyecto (cómo detecta puertos serie, cómo arma un protocolo, qué API llama).
+- **Interoperabilidad**: descubrir el protocolo, formato de archivo o API que usa un programa para que tu código hable con él.
+- **Apps Electron y .NET**: el código se recupera casi completo y legible; son los casos con mejores resultados.
+- **Webs**: ver qué APIs llama el frontend, qué parámetros manda y qué devuelve, sin abrir DevTools a mano.
+- **Depurar tus propios builds** sin el código a mano, o comparar dos versiones para ver qué cambió.
+
+**No esperes milagros con:**
+- **Código del servidor de una web**: REA solo ve lo que llega al navegador (HTML, JS, peticiones). La lógica del backend no se puede ver.
+- **Binarios nativos grandes, sin símbolos u ofuscados**: el pseudocódigo de Ghidra es aproximado, con nombres genéricos (`FUN_00401a20`). Sirve para entender, no para recompilar.
+- **Apps protegidas** (ofuscadores, packers, anti-debug, DRM): REA no las desofusca.
+- **Apps móviles iOS** y apps de la Microsoft Store empaquetadas/cifradas: no soportadas.
+- **Sitios con login**: necesitas iniciar sesión tú, o darle a Claude un `.har` exportado desde tu navegador.
+
+### Qué instala el instalador (`ghidra` + `jadx` + `rea`)
+
+| Componente | Windows | Linux |
+|---|---|---|
+| JDK 21 (Temurin), solo si no hay uno | `%LOCALAPPDATA%\Programs\jdk\` | `~/.local/opt/jdk/` |
+| Ghidra 12.1.4 | `%LOCALAPPDATA%\Programs\ghidra\` | `~/.local/opt/ghidra/` |
+| `GHIDRA_INSTALL_DIR`, `JAVA_HOME` | Variables de usuario | `~/.config/claude_carjavi/env.sh` (cargado desde `~/.profile` y `~/.bashrc`) |
+| jadx-headless-mcp 0.7.1 (motor JADX para APKs, SHA-256 verificado) | `%LOCALAPPDATA%\Programs\jadx\` | `~/.local/opt/jadx/` |
+| `REA_JADX_MCP_JAR` | Variable de usuario | `~/.config/claude_carjavi/jadx.sh` (cargado desde `~/.profile` y `~/.bashrc`) |
+| CLI `rea` | `npm install --global rea-agents` | igual |
+| MCP `rea` en Claude Code | `~/.claude.json` | igual |
+| MCP `rea` en Claude Desktop | `claude_desktop_config.json` | igual |
+| Skill | `~/.claude/skills/reverse-engineer-anything/` | igual |
+
+- Nada pide permisos de administrador.
+- `JAVA_HOME` solo se define si no existe o no es un JDK válido, para no romper el Java de otras herramientas (STM32CubeIDE, Arduino, etc.). Si ya apunta a otro Java, el instalador avisa.
+- En macOS se omite Ghidra: REA usa Hopper en Mac, y `rea setup` (sin `--yes`) ofrece instalarlo.
+
+### Instalación manual (solo REA, sin el instalador)
+```bash
+npm install --global rea-agents
+rea setup --yes --client claude_code --client claude_desktop
+```
+Sin `--yes`, `rea setup` muestra el plan y pide aprobación antes de escribir.
+
+### Verificar
+```bash
+rea --version
+rea doctor --client claude_code --provider ghidra
+```
+En Claude Code, `/mcp` debe mostrar `rea` conectado. También puedes preguntarle a Claude: *"¿tienes disponibles las herramientas de REA?"*.
+
+### Cómo hablarle (lenguaje natural)
+
+**No necesitas saber los comandos `rea`.** Háblale a Claude como a un colega: dile *qué* quieres entender y *dónde* está el programa. Claude elige la herramienta (JavaScript, .NET, Ghidra, navegador, APK), ejecuta los comandos y te responde con evidencia. Los comandos de la [sección de terminal](#ejemplos-de-uso-desde-la-terminal) son opcionales.
+
+**Para mejores resultados, incluye en tu pedido:**
+1. **Qué es y dónde está**: ruta del archivo o carpeta, URL, o el nombre de la app instalada ("está en `C:\Program Files\...`" o "búscala tú").
+2. **La pregunta concreta**: "cómo detecta los puertos", no "analízalo todo". Un pedido enfocado da respuestas mucho mejores.
+3. **Qué quieres al final**: una explicación, un diagrama del flujo, o código en tu proyecto que haga lo mismo.
+4. Opcional: *"muéstrame la evidencia"* y *"separa lo comprobado de lo que supones"*.
+
+La skill se activa sola cuando la tarea depende de un programa ya compilado. Si no se activa, menciona "usa REA" en el pedido.
+
+#### Programas de escritorio
+- **App Electron instalada**: *"Quiero saber cómo Arduino IDE 2 detecta y lista los puertos serie. Está instalado en mi PC, búscalo tú. Muéstrame los archivos, funciones y canales IPC involucrados."*
+- **Copiar una funcionalidad**: *"Me gusta cómo funciona el buscador de Obsidian. Investiga cómo está hecho y arma algo parecido en mi proyecto en React."*
+- **Herramienta .NET de un fabricante**: *"Tengo `C:\tools\ConfigTool.exe`, el configurador de un variador de frecuencia. Creo que es .NET. Averigua qué comandos manda por el puerto serie y con qué formato, para replicarlo en Python."*
+- **Ejecutable nativo**: *"Inspecciona `C:\builds\mi_app.exe` (es mi build de Release, sin el código a mano) y explícame qué hace la función que procesa los paquetes recibidos."*
+- **Formato de archivo**: *"El programa `C:\Program Files\DataLogger\logger.exe` guarda archivos `.dlg`. Averigua cómo los escribe para que pueda leerlos con un script en Python."*
+- **Comparar versiones**: *"Tengo la versión 1.2 y la 1.3 de mi app Electron en `D:\releases\`. ¿Qué cambió en el manejo de la conexión?"*
+
+#### Web y aplicaciones web
+- **APIs de una web**: *"Abre https://ejemplo.com, usa el buscador con la palabra 'sensor' y dime a qué APIs llama, con qué parámetros y qué devuelve."*
+- **Cómo está hecha una web**: *"Mira https://ejemplo.com y dime con qué framework está hecha, qué librerías carga y cómo arma el menú desplegable."*
+- **Mi propia web app**: *"Tengo mi app corriendo en http://localhost:3000. Observa qué peticiones hace al cargar el dashboard y por qué tarda tanto."*
+- **Sitio con login (vía HAR)**: *"Exporté un HAR desde Chrome mientras usaba el panel de mi router: `C:\temp\router.har`. Explícame cómo se autentica y qué endpoint cambia la configuración WiFi."*
+
+#### Android
+- **APK**: *"Analiza `C:\Downloads\app_domotica.apk` y dime cómo se comunica con el dispositivo: ¿Bluetooth, WiFi, MQTT? Muéstrame las clases y los mensajes que manda."*
+- **Permisos y servicios**: *"¿Qué permisos pide `mi_app.apk` y qué servidores contacta?"*
+
+#### Firmware (Linux/WSL)
+- **STM32**: *"Decompila `build/firmware.bin` (STM32, ARM Cortex-M, cargado en 0x08000000) y compara la rutina de inicialización con mi código en `Core/Src/main.c`."*
+- **Imagen de un equipo**: *"Extrae `router_fw.bin` y dime qué sistema de archivos tiene, qué servicios arranca y dónde guarda la configuración."*
+
+#### Diagnóstico
+- *"¿Tienes disponibles las herramientas de REA? Revisa qué falta para analizar APKs."*
+
+### Ejemplos de uso desde la terminal
+Opcional: lo mismo que hace Claude, pero a mano.
+```bash
+# App JavaScript/Electron (carpeta extraída o archivo .asar)
+rea analyze-javascript-application "C:/ruta/MiApp/resources/app.asar" --json
+
+# Resumen de un programa o binario
+rea inspect "C:/builds/mi_app.exe" --provider ghidra --format md
+
+# Decompilar una función (por nombre o dirección)
+rea decompile "C:/builds/mi_app.exe" procesar_paquete --provider ghidra --format md
+
+# Ensamblado .NET: miembros, firmas y strings, sin ejecutarlo
+rea inspect-managed-members "C:/tools/MiHerramienta.exe"
+
+# Firmware crudo ARM (solo Linux; ver limitaciones)
+rea inspect build/firmware.bin --target-format raw-binary --architecture arm --entry-point 0x08000000 --provider ghidra
+
+# Lista completa de comandos
+rea --help
+```
+
+### Limitaciones
+- **Windows + Ghidra es experimental en REA**: solo admite ejecutables nativos **x86-64 (.exe)**, no DLL, ARM ni 32 bits, y solo lectura. Para firmware ARM/ELF o análisis nativo completo, usa Linux (o WSL).
+- El análisis estático de JavaScript/Electron y .NET funciona en Windows sin Ghidra.
+- **APK**: el análisis es estático (lee el APK, no lo ejecuta). Necesita el JDK 17+ que instala el item `ghidra`; en macOS, donde ese item se omite, instala un JDK aparte. Los recursos con Apktool y los dispositivos por `adb` requieren instalar esas herramientas aparte.
+- **Reinicia Claude Code y Claude Desktop después de instalar**, para que el servidor MCP de REA lea `REA_JADX_MCP_JAR` y `JAVA_HOME`.
+- No se instalan IDA ni Hopper; REA los usa si los configuras aparte.
+- **Webs**: necesita Chrome o Edge instalado. Solo ve el lado del navegador; el código del servidor queda fuera de alcance.
+- **Observar un programa mientras corre** (procesos, archivos que abre): solo Linux/macOS. En Windows el análisis es estático (lee los archivos sin ejecutarlos).
+- Firmware con Binwalk/Unblob y capturas de paquetes con TShark: solo Linux, con esas herramientas instaladas.
+- **Sin desofuscación**: código ofuscado, empaquetado (UPX, Themida) o binarios sin símbolos dan resultados parciales.
+- **El análisis cuesta contexto**: programas grandes generan mucha salida. Pide una pregunta concreta en vez de "analízalo todo".
+- **Uso legal**: REA es para investigación, interoperabilidad, educación y software propio o que estés autorizado a analizar.
+
+### Actualizar / desinstalar
+```bash
+# Actualizar: vuelve a correr el instalador, o solo REA:
+rea update
+
+# Desinstalar REA (registros MCP + skill); --purge-data borra también caché y estado
+rea uninstall
+```
+Ghidra, JADX y el JDK se desinstalan borrando sus carpetas (tabla de arriba) y las variables `GHIDRA_INSTALL_DIR` / `REA_JADX_MCP_JAR` / `JAVA_HOME`.
+
+<br>
+
+## Agregar una skill externa
+
+Cada skill externa necesita dos cosas: su **instalación** en `externals.json` y su **sección** en este README.
+
+**1. Instalación** — agrega una entrada a [`externals.json`](./externals.json). Campos:
+
+| Campo | Qué es |
+|---|---|
+| `name` | Identificador corto. |
+| `description` | Se muestra durante la instalación. |
+| `docs` | URL de referencia (opcional). |
+| `enabled` | `false` para desactivarlo sin borrarlo. |
+| `windows` | Lista de comandos PowerShell. La ruta del repo está en `$env:REPO_ROOT`. |
+| `unix` | Lista de comandos bash. La ruta del repo está en `$REPO_ROOT`. |
+
+Reglas:
+- Los items se instalan **en orden**; si uno depende de otro, va después (REA va después de Ghidra y JADX).
+- Si un comando falla, se saltan los demás comandos de ese item y se sigue con el siguiente item.
+- Los comandos deben poder **repetirse sin romper nada**, porque re-correr el instalador es la forma de actualizar.
+- Si necesitas más de 2 o 3 comandos, crea `externals/<nombre>/install.ps1` e `install.sh` y llámalos desde el JSON.
+- En Windows, los comandos con `--` (como `claude mcp add ... -- npx ...`) van dentro de `cmd /c '...'`, porque PowerShell puede comerse el `--`.
+
+Plantillas:
+
+```json
+{
+  "name": "mi-mcp",
+  "description": "Servidor MCP de ejemplo para Claude Code",
+  "docs": "https://github.com/usuario/mi-mcp",
+  "enabled": true,
+  "windows": [
+    "if (-not ((claude mcp list) -match '^mi-mcp:')) { cmd /c 'claude mcp add --scope user mi-mcp -- npx -y paquete-mi-mcp' }"
+  ],
+  "unix": [
+    "claude mcp get mi-mcp >/dev/null 2>&1 || claude mcp add --scope user mi-mcp -- npx -y paquete-mi-mcp"
+  ]
+}
+```
+
+```json
+{
+  "name": "skill-de-otro-repo",
+  "description": "Skill publicada en un repositorio de GitHub",
+  "enabled": true,
+  "windows": [
+    "$d = Join-Path $env:TEMP 'skill-repo'; Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue; git clone --depth 1 https://github.com/usuario/repo $d",
+    "Copy-Item (Join-Path $d 'skills\\nombre-skill') (Join-Path $env:USERPROFILE '.claude\\skills') -Recurse -Force"
+  ],
+  "unix": [
+    "rm -rf /tmp/skill-repo && git clone --depth 1 https://github.com/usuario/repo /tmp/skill-repo && cp -r /tmp/skill-repo/skills/nombre-skill ~/.claude/skills/"
+  ]
+}
+```
+
+**2. Documentación** — agrega una fila a la tabla de [Skills Externas](#skills-externas) y una sección `## <nombre-de-la-skill>` nueva justo antes de esta, con esta estructura:
+
+```markdown
+## nombre-de-la-skill
+
+Qué es, de dónde viene (link al repo) y licencia.
+
+### Qué hace
+### Qué instala el instalador
+### Verificar
+### Ejemplos de uso
+### Limitaciones
+### Actualizar / desinstalar
+
+<br>
+```
+
+<br>
+
+<br>
 
 <br>
 
@@ -367,31 +667,78 @@ Crear o actualizar `README.md` con estas secciones:
 ## install.ps1
 
 ```PowerShell
-# install.ps1 - Instala CLAUDE.md y las skills de este repo en la configuracion
-# de Claude Code del usuario actual (~/.claude/). Sobrescribe archivos existentes
-# con el mismo nombre.
+# install.ps1 - Instala en este PC todo lo del repo: CLAUDE.md y skills propias en ~/.claude/
+# y los items externos (skills, repos, MCP, herramientas) declarados en externals.json.
+# @author: Carlos Briceño <carjavi@hotmail.com>
+# @date: 15-10-2026
+# @copyright: Copyright (c) 2026 www.carjavi.com
+# @version: V2.0
+# @library: No external dependencies (cada item de externals.json declara las suyas)
+#
+# Sobrescribe archivos existentes con el mismo nombre. Volver a correrlo actualiza todo.
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = $PSScriptRoot
+$env:REPO_ROOT = $repoRoot
 $claudeDir = Join-Path $env:USERPROFILE ".claude"
 $skillsDir = Join-Path $claudeDir "skills"
 
 New-Item -ItemType Directory -Force -Path $claudeDir | Out-Null
 New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null
 
+# --- 1. CLAUDE.md global -----------------------------------------------------
 Copy-Item -Path (Join-Path $repoRoot "CLAUDE.md") -Destination (Join-Path $claudeDir "CLAUDE.md") -Force
 Write-Output "CLAUDE.md instalado en $claudeDir"
 
+# --- 2. Skills propias (carpeta completa: SKILL.md + references/scripts) -----
 Get-ChildItem -Path (Join-Path $repoRoot "skills") -Directory | ForEach-Object {
     $destSkillDir = Join-Path $skillsDir $_.Name
     New-Item -ItemType Directory -Force -Path $destSkillDir | Out-Null
-    Copy-Item -Path (Join-Path $_.FullName "SKILL.md") -Destination (Join-Path $destSkillDir "SKILL.md") -Force
+    Copy-Item -Path (Join-Path $_.FullName "*") -Destination $destSkillDir -Recurse -Force
     Write-Output "Skill instalada: $($_.Name)"
 }
 
-Write-Output "Listo."
+# --- 3. Externos (externals.json) --------------------------------------------
+$manifestPath = Join-Path $repoRoot "externals.json"
+$ok = @()
+$failed = @()
+$skipped = @()
 
+if (Test-Path $manifestPath) {
+    $manifest = Get-Content -Path $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($item in $manifest.items) {
+        if ($item.enabled -eq $false) { $skipped += $item.name; continue }
+        if (-not $item.windows) {
+            Write-Output "`n== $($item.name): sin comandos para Windows, se omite"
+            $skipped += $item.name
+            continue
+        }
+        Write-Output "`n== $($item.name): $($item.description)"
+        try {
+            foreach ($command in $item.windows) {
+                $global:LASTEXITCODE = 0
+                Invoke-Expression $command
+                if ($LASTEXITCODE -ne 0) { throw "codigo de salida $LASTEXITCODE en: $command" }
+            }
+            $ok += $item.name
+        } catch {
+            Write-Warning "$($item.name) fallo: $($_.Exception.Message)"
+            $failed += $item.name
+        }
+    }
+}
+
+# --- Resumen -----------------------------------------------------------------
+Write-Output "`n================ Resumen ================"
+if ($ok) { Write-Output ("Instalados: " + ($ok -join ", ")) }
+if ($skipped) { Write-Output ("Omitidos:   " + ($skipped -join ", ")) }
+if ($failed) {
+    Write-Output ("Con errores: " + ($failed -join ", ") + "  (revisa los mensajes de arriba y vuelve a correr)")
+}
+Write-Output "Abre una terminal nueva y reinicia Claude Code / Claude Desktop para cargar los cambios."
+Write-Output "Listo."
+if ($failed) { exit 1 }
 ```
 
 <br>
@@ -400,31 +747,166 @@ Write-Output "Listo."
 
 ```bash
 #!/usr/bin/env bash
-# install.sh - Instala CLAUDE.md y las skills de este repo en la configuracion
-# de Claude Code del usuario actual (~/.claude/). Sobrescribe archivos existentes
-# con el mismo nombre.
+# install.sh - Instala en este PC todo lo del repo: CLAUDE.md y skills propias en ~/.claude/
+# y los items externos (skills, repos, MCP, herramientas) declarados en externals.json.
+# @author: Carlos Briceño <carjavi@hotmail.com>
+# @date: 15-10-2026
+# @copyright: Copyright (c) 2026 www.carjavi.com
+# @version: V2.0
+# @library: node o python3 (solo para leer externals.json)
+#
+# Sobrescribe archivos existentes con el mismo nombre. Volver a correrlo actualiza todo.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export REPO_ROOT="$repo_root"
 claude_dir="$HOME/.claude"
 skills_dir="$claude_dir/skills"
+env_file="$HOME/.config/claude_carjavi/env.sh"   # variables que dejan los items externos
 
 mkdir -p "$claude_dir" "$skills_dir"
 
+# --- 1. CLAUDE.md global -----------------------------------------------------
 cp -f "$repo_root/CLAUDE.md" "$claude_dir/CLAUDE.md"
 echo "CLAUDE.md instalado en $claude_dir"
 
+# --- 2. Skills propias (carpeta completa: SKILL.md + references/scripts) -----
 for dir in "$repo_root"/skills/*/; do
     name="$(basename "$dir")"
     mkdir -p "$skills_dir/$name"
-    cp -f "$dir/SKILL.md" "$skills_dir/$name/SKILL.md"
+    cp -rf "$dir". "$skills_dir/$name/"
     echo "Skill instalada: $name"
 done
 
-echo "Listo."
+# --- 3. Externos (externals.json) --------------------------------------------
+# Convierte el manifiesto en lineas "ITEM<TAB>nombre<TAB>descripcion" / "CMD<TAB>comando" / "SKIP<TAB>nombre".
+read_manifest() {
+    local script='
+const m = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+for (const it of m.items || []) {
+  if (it.enabled === false || !(it.unix || []).length) { console.log(`SKIP\t${it.name}`); continue; }
+  console.log(`ITEM\t${it.name}\t${it.description || ""}`);
+  for (const c of it.unix) console.log(`CMD\t${c}`);
+}'
+    if command -v node >/dev/null 2>&1; then
+        node -e "$script" "$1"
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 -c '
+import json, sys
+m = json.load(open(sys.argv[1], encoding="utf-8"))
+for it in m.get("items", []):
+    cmds = it.get("unix") or []
+    if it.get("enabled") is False or not cmds:
+        print("SKIP\t" + it["name"]); continue
+    print("ITEM\t%s\t%s" % (it["name"], it.get("description", "")))
+    for c in cmds: print("CMD\t" + c)' "$1"
+    else
+        echo "ERROR: se necesita node o python3 para leer externals.json" >&2
+        return 1
+    fi
+}
 
+ok=(); failed=(); skipped=()
+current=""; current_failed=0
+
+# Cierra el item en curso y lo anota como instalado o con error.
+finish_item() {
+    [ -z "$current" ] && return
+    if [ "$current_failed" -eq 0 ]; then ok+=("$current"); else failed+=("$current"); fi
+    current=""
+}
+
+if [ -f "$repo_root/externals.json" ]; then
+    manifest_lines="$(read_manifest "$repo_root/externals.json")"
+    while IFS=$'\t' read -r kind name rest; do
+        case "$kind" in
+            SKIP) skipped+=("$name") ;;
+            ITEM)
+                finish_item
+                current="$name"; current_failed=0
+                printf '\n== %s: %s\n' "$name" "$rest"
+                ;;
+            CMD)
+                [ "$current_failed" -ne 0 ] && continue
+                command_line="$name${rest:+	$rest}"
+                # Cada comando ve las variables que dejaron los items anteriores (p. ej. GHIDRA_INSTALL_DIR).
+                if ! ( [ -f "$env_file" ] && . "$env_file"; bash -c "$command_line" ); then
+                    echo "AVISO: $current fallo en: $command_line" >&2
+                    current_failed=1
+                fi
+                ;;
+        esac
+    done <<< "$manifest_lines"
+    finish_item
+fi
+
+# --- Resumen -----------------------------------------------------------------
+echo
+echo "================ Resumen ================"
+[ ${#ok[@]} -gt 0 ] && echo "Instalados: ${ok[*]}"
+[ ${#skipped[@]} -gt 0 ] && echo "Omitidos:   ${skipped[*]}"
+[ ${#failed[@]} -gt 0 ] && echo "Con errores: ${failed[*]}  (revisa los mensajes de arriba y vuelve a correr)"
+echo "Abre una terminal nueva y reinicia Claude Code / Claude Desktop para cargar los cambios."
+echo "Listo."
+[ ${#failed[@]} -eq 0 ]
 ```
 
+<br>
+
+## externals.json
+
+```json
+{
+  "_help": [
+    "Lista de skills, repositorios, MCP y herramientas externas que install.ps1 / install.sh instalan automaticamente.",
+    "Se procesan en orden: si un item necesita otro (REA usa Ghidra), ponlo despues.",
+    "Campos: name, description, docs (URL), enabled (false = se omite), windows (comandos PowerShell), unix (comandos bash).",
+    "Los comandos se ejecutan uno por uno; si uno falla se salta el resto de ese item y se sigue con el siguiente.",
+    "Variable disponible: la ruta del repo en $env:REPO_ROOT (Windows) o $REPO_ROOT (Linux/macOS).",
+    "Los comandos deben ser idempotentes: volver a correr el instalador sirve para actualizar."
+  ],
+  "items": [
+    {
+      "name": "ghidra",
+      "description": "Ghidra 12.1.4 + JDK 21: motor de analisis nativo que usa REA para decompilar binarios",
+      "docs": "https://github.com/NationalSecurityAgency/ghidra",
+      "enabled": true,
+      "windows": [
+        "& \"$env:REPO_ROOT\\externals\\ghidra\\install.ps1\" -Version 12.1.4"
+      ],
+      "unix": [
+        "bash \"$REPO_ROOT/externals/ghidra/install.sh\" 12.1.4"
+      ]
+    },
+    {
+      "name": "jadx",
+      "description": "jadx-headless-mcp 0.7.1: motor JADX que usa REA para decompilar APKs Android (usa el JDK 21 del item ghidra)",
+      "docs": "https://github.com/morluto/rea/blob/main/docs/android-analysis.md",
+      "enabled": true,
+      "windows": [
+        "& \"$env:REPO_ROOT\\externals\\jadx\\install.ps1\" -Version 0.7.1"
+      ],
+      "unix": [
+        "bash \"$REPO_ROOT/externals/jadx/install.sh\" 0.7.1"
+      ]
+    },
+    {
+      "name": "rea",
+      "description": "REA (Reverse Engineer Anything): CLI + servidor MCP + skill reverse-engineer-anything para Claude Code y Claude Desktop",
+      "docs": "https://github.com/morluto/rea",
+      "enabled": true,
+      "windows": [
+        "& \"$env:REPO_ROOT\\externals\\rea\\install.ps1\""
+      ],
+      "unix": [
+        "bash \"$REPO_ROOT/externals/rea/install.sh\""
+      ]
+    }
+  ]
+}
+```
+
+Los scripts de cada externo están en [`externals/ghidra/`](./externals/ghidra), [`externals/jadx/`](./externals/jadx) y [`externals/rea/`](./externals/rea).
 
 <br>
 

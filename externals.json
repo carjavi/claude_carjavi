@@ -1,0 +1,48 @@
+{
+  "_help": [
+    "Lista de skills, repositorios, MCP y herramientas externas que install.ps1 / install.sh instalan automaticamente.",
+    "Se procesan en orden: si un item necesita otro (REA usa Ghidra), ponlo despues.",
+    "Campos: name, description, docs (URL), enabled (false = se omite), windows (comandos PowerShell), unix (comandos bash).",
+    "Los comandos se ejecutan uno por uno; si uno falla se salta el resto de ese item y se sigue con el siguiente.",
+    "Variable disponible: la ruta del repo en $env:REPO_ROOT (Windows) o $REPO_ROOT (Linux/macOS).",
+    "Los comandos deben ser idempotentes: volver a correr el instalador sirve para actualizar."
+  ],
+  "items": [
+    {
+      "name": "ghidra",
+      "description": "Ghidra 12.1.4 + JDK 21: motor de analisis nativo que usa REA para decompilar binarios",
+      "docs": "https://github.com/NationalSecurityAgency/ghidra",
+      "enabled": true,
+      "windows": [
+        "& \"$env:REPO_ROOT\\externals\\ghidra\\install.ps1\" -Version 12.1.4"
+      ],
+      "unix": [
+        "bash \"$REPO_ROOT/externals/ghidra/install.sh\" 12.1.4"
+      ]
+    },
+    {
+      "name": "jadx",
+      "description": "jadx-headless-mcp 0.7.1: motor JADX que usa REA para decompilar APKs Android (usa el JDK 21 del item ghidra)",
+      "docs": "https://github.com/morluto/rea/blob/main/docs/android-analysis.md",
+      "enabled": true,
+      "windows": [
+        "& \"$env:REPO_ROOT\\externals\\jadx\\install.ps1\" -Version 0.7.1"
+      ],
+      "unix": [
+        "bash \"$REPO_ROOT/externals/jadx/install.sh\" 0.7.1"
+      ]
+    },
+    {
+      "name": "rea",
+      "description": "REA (Reverse Engineer Anything): CLI + servidor MCP + skill reverse-engineer-anything para Claude Code y Claude Desktop",
+      "docs": "https://github.com/morluto/rea",
+      "enabled": true,
+      "windows": [
+        "& \"$env:REPO_ROOT\\externals\\rea\\install.ps1\""
+      ],
+      "unix": [
+        "bash \"$REPO_ROOT/externals/rea/install.sh\""
+      ]
+    }
+  ]
+}
