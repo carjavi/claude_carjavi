@@ -33,6 +33,7 @@ Las convenciones específicas por lenguaje/plataforma viven como skills en `skil
 - Si el contexto de la conversación no alcanza: revisar primero `context/`, `docs/` u otro directorio de documentación del proyecto si existe, antes de buscar información externa.
 - Si hay demasiadas iteraciones sin resultado en un mismo enfoque, decirlo explícitamente y sugerir alternativas técnicas en vez de seguir insistiendo.
 - Manejo de errores, retries y timeouts: obligatorio en fronteras de I/O (APIs, red, buses de comunicación, drivers de hardware) — ver skill `embedded-firmware-cpp` y §6 (APIs y seguridad). No añadir manejo de errores especulativo en funciones internas puras o scripts de un solo uso donde el caso de falla no puede ocurrir.
+- **No dejar carpetas vacías en el folder de trabajo.** En particular, no crear la carpeta `generated-images` (ni similares para salidas) de forma anticipada: crearla solo en el momento en que se vaya a guardar al menos una imagen en ella. Antes de dar una tarea por terminada, revisar el folder de trabajo y eliminar `generated-images` u otra carpeta de salida que haya quedado vacía.
 
 ---
 
@@ -43,6 +44,15 @@ Las convenciones específicas por lenguaje/plataforma viven como skills en `skil
 - JavaScript / TypeScript: `camelCase` para variables y funciones, `PascalCase` para clases y componentes React — es la convención que esperan ESLint/Prettier y el ecosistema npm; usar `snake_case` en JS genera fricción constante con linters y librerías de terceros.
 
 > Nota: la regla original decía "snake_case en todo, nunca camelCase". La ajusté por lenguaje — si preferís mantener snake_case también en JS/TS de forma consciente, decímelo y lo dejo como excepción explícita.
+
+### 3.1 Python — entorno virtual (obligatorio)
+
+Al crear o probar una app/proyecto en Python, Claude **debe** seguir estas reglas:
+
+1. **Nombre y ubicación:** crear el entorno virtual en la raíz del proyecto con el nombre exacto `venv` — `python -m venv venv`. Nunca usar `.venv` ni ningún nombre que empiece con punto. Si una herramienta (`uv`, el IDE, etc.) crea `.venv` por defecto, indicarle explícitamente el nombre `venv` (ej. `uv venv venv`).
+2. **Nunca oculto:** la carpeta `venv` debe quedar siempre visible. No aplicarle el atributo oculto en Windows (`attrib +h`) ni ubicarla en una ruta oculta.
+3. **Dejarlo listo tras las pruebas:** cuando Claude pruebe la app que creó, debe hacerlo **dentro de ese `venv`** e instalar ahí todas las dependencias (`pip install -r requirements.txt`). Al terminar, **no borrar el `venv`**: debe quedar en el folder de trabajo con las librerías ya instaladas, para que el usuario pueda activarlo y ejecutar la app de inmediato. Mantener `requirements.txt` sincronizado con lo instalado.
+4. **Git y README:** agregar `venv/` al `.gitignore` y documentar en el README la activación con esa ruta: `venv\Scripts\activate` (Windows) o `source venv/bin/activate` (macOS/Linux).
 
 ---
 
